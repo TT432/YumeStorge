@@ -163,6 +163,7 @@ namespace YumeStorge
             RegisterYumeElementType(typeof(YumeDouble), typeof(double), 3, () => new YumeDouble());
             RegisterYumeElementType(typeof(YumeString), typeof(string), 4, () => new YumeString());
             RegisterYumeElementType(typeof(YumeArray), typeof(List<IYumeElement>), 5, () => new YumeArray());
+            RegisterYumeElementType(typeof(YumeBool), typeof(bool), 6, () => new YumeBool());
         }
     }
 }

@@ -291,6 +291,45 @@ namespace YumeStorge
         }
     }
 
+    public class YumeBool : IYumeElement
+    {
+        bool value;
+
+        public YumeBool(bool value)
+        {
+            this.value = value;
+        }
+
+        public YumeBool()
+        {
+            value = false;
+        }
+
+        public object Get()
+        {
+            return value;
+        }
+
+        public IYumeElement Read(BinaryReader reader)
+        {
+            value = reader.ReadBoolean();
+            return this;
+        }
+
+        public void Set(object value)
+        {
+            if (value is bool b)
+            {
+                this.value = b;
+            }
+        }
+
+        public void Write(BinaryWriter writer)
+        {
+            writer.Write(value);
+        }
+    }
+
     class DESHelper
     {
         private readonly ICryptoTransform encryptor;
