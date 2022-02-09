@@ -1,16 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace YumeStorge
 {
     public interface IYumeElement
     {
-        byte Type();
         IYumeElement Read(BinaryReader reader);
         void Write(BinaryWriter writer);
 
@@ -128,16 +125,11 @@ namespace YumeStorge
             }
         }
 
-        public byte Type()
-        {
-            return 1;
-        }
-
         public void Write(BinaryWriter writer)
         {
             foreach (var entry in elements)
             {
-                writer.Write(entry.Value.Type());
+                writer.Write(YumeUtils.Instance.GetId(entry.Value));
                 writer.Write(entry.Key);
                 entry.Value.Write(writer);
             }
@@ -147,9 +139,9 @@ namespace YumeStorge
 
         public void Set(object value)
         {
-            
+
         }
-        
+
         public object Get()
         {
             return elements;
@@ -177,12 +169,7 @@ namespace YumeStorge
 
         public void Set(object value)
         {
-            
-        }
 
-        public byte Type()
-        {
-            return 5;
         }
 
         public void Write(BinaryWriter writer)
@@ -190,7 +177,7 @@ namespace YumeStorge
             writer.Write(values.Count());
             foreach (var entry in values)
             {
-                writer.Write(entry.Type());
+                writer.Write(YumeUtils.Instance.GetId(entry));
                 entry.Write(writer);
             }
         }
@@ -216,11 +203,6 @@ namespace YumeStorge
             return this;
         }
 
-        public byte Type()
-        {
-            return 2;
-        }
-
         public void Write(BinaryWriter writer)
         {
             writer.Write(value);
@@ -228,7 +210,7 @@ namespace YumeStorge
 
         public void Set(object value)
         {
-            this.value = (int) value;
+            this.value = (int)value;
         }
 
         public object Get()
@@ -257,11 +239,6 @@ namespace YumeStorge
             return this;
         }
 
-        public byte Type()
-        {
-            return 3;
-        }
-
         public void Write(BinaryWriter writer)
         {
             writer.Write(value);
@@ -269,7 +246,7 @@ namespace YumeStorge
 
         public void Set(object value)
         {
-            this.value = (double) value;
+            this.value = (double)value;
         }
 
         public object Get()
@@ -298,11 +275,6 @@ namespace YumeStorge
             return this;
         }
 
-        public byte Type()
-        {
-            return 4;
-        }
-
         public void Write(BinaryWriter writer)
         {
             writer.Write(value);
@@ -321,9 +293,6 @@ namespace YumeStorge
 
     class DESHelper
     {
-        byte[] byKey;
-        byte[] byIV;
-
         private readonly ICryptoTransform encryptor;
         private readonly ICryptoTransform decryptor;
 

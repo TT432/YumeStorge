@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace YumeStorge
 {
@@ -11,13 +8,17 @@ namespace YumeStorge
     {
         public static YumeUtils Instance = new YumeUtils();
 
-        public readonly Dictionary<int, Func<IYumeElement>> YumeElements;
-        public readonly Dictionary<Type, int> YumeTypes;
+        private readonly Dictionary<byte, Func<IYumeElement>> YumeElements;
+        private readonly Dictionary<Type, byte> YumeTypes;
+        private readonly Dictionary<Type, byte> MainYumeTypes;
 
         private YumeUtils()
         {
-            YumeElements = Init();
-            YumeTypes = TypesInit();
+            YumeElements = new Dictionary<byte, Func<IYumeElement>>();
+            YumeTypes = new Dictionary<Type, byte>();
+            MainYumeTypes = new Dictionary<Type, byte>();
+
+            Register();
         }
 
         public void ToObject(YumeRoot root, object obj)
@@ -31,8 +32,8 @@ namespace YumeStorge
                 {
                     if (a is YumeAttribute ya && root.Has(ya.Name) && pi.CanRead && pi.CanWrite)
                     {
-                        pi.SetValue(obj, pi.PropertyType.IsSubclassOf(typeof(IYumeElement)) ? 
-                            root.Get(ya.Name): root.Get(ya.Name).Get());
+                        pi.SetValue(obj, pi.PropertyType.IsSubclassOf(typeof(IYumeElement)) ?
+                            root.Get(ya.Name) : root.Get(ya.Name).Get());
                     }
                 }
             }
@@ -120,25 +121,48 @@ namespace YumeStorge
             }
         }
 
-        private Dictionary<int, Func<IYumeElement>> Init()
+        public void RegisterYumeElementType(Type mainType, Type subType, byte id, Func<IYumeElement> func)
         {
-            Dictionary<int, Func<IYumeElement>> result = new Dictionary<int, Func<IYumeElement>>();
-            result.Add(1, () => new YumeRoot());
-            result.Add(2, () => new YumeInt());
-            result.Add(3, () => new YumeDouble());
-            result.Add(4, () => new YumeString());
-            result.Add(5, () => new YumeArray());
-            return result;
+            if (YumeElements.ContainsKey(id))
+            {
+                YumeElements[id] = func;
+            }
+            else
+            {
+                YumeElements.Add(id, func);
+            }
+
+            if (YumeTypes.ContainsKey(subType))
+            {
+                YumeTypes[subType] = id;
+            }
+            else
+            {
+                YumeElements.Add(id, func);
+            }
+
+            if (MainYumeTypes.ContainsKey(mainType))
+            {
+                MainYumeTypes[mainType] = id;
+            }
+            else
+            {
+                MainYumeTypes.Add(mainType, id);
+            }
         }
 
-        private Dictionary<Type, int> TypesInit()
+        public byte GetId(IYumeElement yumeElement)
         {
-            Dictionary<Type, int> result = new Dictionary<Type,int>();
-            result.Add(typeof(int), 2);
-            result.Add(typeof(double), 3);
-            result.Add(typeof(string), 4);
-            result.Add(typeof(List<>), 5);
-            return result;
+            return MainYumeTypes[yumeElement.GetType()];
+        }
+
+        private void Register()
+        {
+            RegisterYumeElementType(typeof(YumeRoot), typeof(Dictionary<string, IYumeElement>), 1, () => new YumeRoot());
+            RegisterYumeElementType(typeof(YumeInt), typeof(int), 2, () => new YumeInt());
+            RegisterYumeElementType(typeof(YumeDouble), typeof(double), 3, () => new YumeDouble());
+            RegisterYumeElementType(typeof(YumeString), typeof(string), 4, () => new YumeString());
+            RegisterYumeElementType(typeof(YumeArray), typeof(List<IYumeElement>), 5, () => new YumeArray());
         }
     }
 }
