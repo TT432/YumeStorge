@@ -6,11 +6,12 @@ namespace YumeStorge
 {
     public class YumeUtils
     {
-        public static YumeUtils Instance = new YumeUtils();
+        private static readonly Lazy<YumeUtils> _instance = new Lazy<YumeUtils>(() => new YumeUtils());
+        public static YumeUtils Instance => _instance.Value;
 
-        private readonly Dictionary<byte, Func<IYumeElement>> YumeElements;
-        private readonly Dictionary<Type, byte> YumeTypes;
-        private readonly Dictionary<Type, byte> MainYumeTypes;
+        private Dictionary<byte, Func<IYumeElement>> YumeElements;
+        private Dictionary<Type, byte> YumeTypes;
+        private Dictionary<Type, byte> MainYumeTypes;
 
         private YumeUtils()
         {
@@ -25,28 +26,54 @@ namespace YumeStorge
         {
             Type type = obj.GetType();
 
-            // 遍历属性
-            foreach (PropertyInfo pi in type.GetProperties())
+            ScanProperties(type, (pi, ya) =>
             {
-                foreach (Attribute a in pi.GetCustomAttributes(true))
+                if (root.Has(ya.Name))
                 {
-                    if (a is YumeAttribute ya && root.Has(ya.Name) && pi.CanRead && pi.CanWrite)
-                    {
-                        pi.SetValue(obj, pi.PropertyType.IsSubclassOf(typeof(IYumeElement)) ?
+                    pi.SetValue(obj, pi.PropertyType.IsSubclassOf(typeof(IYumeElement)) ?
                             root.Get(ya.Name) : root.Get(ya.Name).Get());
-                    }
                 }
-            }
 
-            // 遍历字段
-            foreach (FieldInfo fi in type.GetFields())
+                return obj;
+            });
+            
+
+            ScanFields(type, (fi, ya) =>
+            {
+                if (root.Has(ya.Name))
+                {
+                    fi.SetValue(obj, fi.FieldType.IsSubclassOf(typeof(IYumeElement)) ?
+                                root.Get(ya.Name) : root.Get(ya.Name).Get());
+                }
+                return obj;
+            });
+        }
+
+        private void ScanFields(Type type, Func<FieldInfo, YumeAttribute, object> func)
+        {
+            var fields = type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+
+            foreach (FieldInfo fi in fields)
             {
                 foreach (Attribute a in fi.GetCustomAttributes(true))
                 {
-                    if (a is YumeAttribute ya && root.Has(ya.Name))
+                    if (a is YumeAttribute ya)
                     {
-                        fi.SetValue(obj, fi.FieldType.IsSubclassOf(typeof(IYumeElement)) ?
-                            root.Get(ya.Name) : root.Get(ya.Name).Get());
+                        func.Invoke(fi, ya);
+                    }
+                }
+            }
+        }
+
+        private void ScanProperties(Type type, Func<PropertyInfo, YumeAttribute, object> func)
+        {
+            foreach (PropertyInfo pi in type.GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
+            {
+                foreach (Attribute a in pi.GetCustomAttributes(true))
+                {
+                    if (a is YumeAttribute ya && pi.CanRead && pi.CanWrite)
+                    {
+                        func(pi, ya);
                     }
                 }
             }
@@ -58,29 +85,17 @@ namespace YumeStorge
 
             YumeRoot result = new YumeRoot();
 
-            // 遍历属性
-            foreach (PropertyInfo pi in type.GetProperties())
+            ScanProperties(type, (pi, ya) =>
             {
-                foreach (Attribute a in pi.GetCustomAttributes(true))
-                {
-                    if (a is YumeAttribute ya && pi.CanRead && pi.CanWrite)
-                    {
-                        TryAdd(result, ya.Name, pi.GetValue(obj));
-                    }
-                }
-            }
+                TryAdd(result, ya.Name, pi.GetValue(obj));
+                return obj;
+            });
 
-            // 遍历字段
-            foreach (FieldInfo fi in type.GetFields())
+            ScanFields(type, (fi, ya) =>
             {
-                foreach (Attribute a in fi.GetCustomAttributes(true))
-                {
-                    if (a is YumeAttribute ya)
-                    {
-                        TryAdd(result, ya.Name, fi.GetValue(obj));
-                    }
-                }
-            }
+                TryAdd(result, ya.Name, fi.GetValue(obj));
+                return obj;
+            });
 
             return result;
         }
@@ -108,11 +123,11 @@ namespace YumeStorge
             }
             else
             {
-                foreach (var entry in YumeTypes)
+                foreach (var key in YumeTypes.Keys)
                 {
-                    if (entry.Key.IsInstanceOfType(o))
+                    if (key.IsInstanceOfType(o))
                     {
-                        var value = YumeElements[entry.Value].Invoke();
+                        IYumeElement value = YumeElements[YumeTypes[key]]();
                         value.Set(o);
                         result.Set(name, value);
                         return;
@@ -138,7 +153,7 @@ namespace YumeStorge
             }
             else
             {
-                YumeElements.Add(id, func);
+                YumeTypes.Add(subType, id);
             }
 
             if (MainYumeTypes.ContainsKey(mainType))

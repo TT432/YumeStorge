@@ -82,7 +82,7 @@ namespace YumeStorge
 
     public class YumeRoot : IYumeElement
     {
-        Dictionary<string, IYumeElement> elements = new Dictionary<string, IYumeElement>();
+        private Dictionary<string, IYumeElement> elements = new Dictionary<string, IYumeElement>();
 
         public IYumeElement Get(string name)
         {
@@ -293,7 +293,7 @@ namespace YumeStorge
 
     public class YumeBool : IYumeElement
     {
-        bool value;
+        private bool value;
 
         public YumeBool(bool value)
         {
@@ -330,7 +330,7 @@ namespace YumeStorge
         }
     }
 
-    class DESHelper
+    internal class DESHelper
     {
         private readonly ICryptoTransform encryptor;
         private readonly ICryptoTransform decryptor;
