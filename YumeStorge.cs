@@ -146,6 +146,12 @@ namespace YumeStorge
         {
             return elements;
         }
+
+        public IYumeElement this[string key]
+        {
+            get { return Get(key); }
+            set { Set(key, value); }
+        }
     }
 
     public class YumeArray : IYumeElement
